@@ -190,6 +190,9 @@ CONTEXT drawAxes(CONTEXT)(const Bounds bounds, CONTEXT context)
     // Draw ticks
     auto tick_x = xaxis.min_tick;
     auto tick_size = tickLength(yaxis);
+
+    size_t tickWidthInPixels = context.userToDeviceDistance(tick_x);
+    double freeSpace = tick_x.to!double;
     while (tick_x < xaxis.max)
     {
         context = drawLine(Point(tick_x, yaxis.min), Point(tick_x, yaxis.min
@@ -199,9 +202,18 @@ CONTEXT drawAxes(CONTEXT)(const Bounds bounds, CONTEXT context)
         auto extents = context.textExtents(tick_x.to!string);
         auto textSize = cairo.Point!double(0.5 * extents.width, -extents.height);
         context.restore;
-        textSize = context.deviceToUserDistance(textSize);
-        context = drawText(tick_x.to!string, Point(tick_x - textSize.x, yaxis
-            .min - 1.5 * textSize.y), context);
+        // Make sure labels don't overlap
+        if ( freeSpace > textSize.x )
+        {
+            textSize = context.deviceToUserDistance(textSize);
+            if ( tick_x + textSize.x < bounds.max_x ) // Don't draw outside of window
+                context = drawText(tick_x.to!string, Point(tick_x - textSize.x, 
+                            yaxis.min - 1.5 * textSize.y), context);
+        }
+        else
+        {
+            freeSpace += tickWidthInPixels;
+        }
         tick_x += xaxis.tick_width;
     }
     
